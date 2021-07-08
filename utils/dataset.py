@@ -11,9 +11,10 @@
 # here put the import lib
 import pandas as pd
 import numpy as np
+from pandas.core.frame import DataFrame
 
 
-def load_watermelon() -> pd.DataFrame:
+def load_watermelon_2() -> pd.DataFrame:
     """生成西瓜数据
 
     Returns:
@@ -61,4 +62,25 @@ def load_watermelon() -> pd.DataFrame:
     df['脐部'] = navel_list
     df['触感'] = touch_list
     df['target'] = target_list
+    return df
+
+
+def load_watermelon_3() -> pd.DataFrame():
+    """读取西瓜数据集3.0
+    """
+    # 读取西瓜数据集2
+    df = load_watermelon_2()
+
+    # 密度
+    density_list = [0.697, 0.774, 0.634, 0.608, 0.556, 0.403, 0.481, 0.437,
+                    0.666, 0.243, 0.245, 0.343, 0.639, 0.657, 0.360, 0.593,
+                    0.719]
+
+    # 含糖量
+    sugar_list = [0.460, 0.376, 0.264, 0.318, 0.215, 0.237, 0.149, 0.211,
+                  0.091, 0.267, 0.057, 0.099, 0.161, 0.198, 0.370, 0.042,
+                  0.103]
+    
+    df['密度'] = density_list
+    df['含糖量'] = sugar_list
     return df
