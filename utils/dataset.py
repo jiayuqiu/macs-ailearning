@@ -65,8 +65,11 @@ def load_watermelon_2() -> pd.DataFrame:
     return df
 
 
-def load_watermelon_3() -> pd.DataFrame():
+def load_watermelon_3() -> pd.DataFrame:
     """读取西瓜数据集3.0
+
+    Returns:
+        pd.DataFrame: [西瓜数据集3.0]
     """
     # 读取西瓜数据集2
     df = load_watermelon_2()
