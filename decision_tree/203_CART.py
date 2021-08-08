@@ -15,6 +15,10 @@ import numpy as np
 from pprint import pprint
 from collections import Counter
 from dataset import load_watermelon_2_alpha
+# from sklearn.tree import DecisionTreeClassifier
+
+from anytree import Node
+
 
 class CART(object):
     def __init__(self, depth=5) -> None:
@@ -23,9 +27,9 @@ class CART(object):
         self.depth = 5
         super().__init__()
     
-    def separate(self, X, y, parent_node, parent='root', depth=1):
+    def separate(self, X, y, parent, depth=1):
         min_gini = 9999
-        res_dict = parent_node.copy()
+        res_dict = {}
 
         if X.shape[0] == 0:
             # 若无数据输入
@@ -43,46 +47,52 @@ class CART(object):
                 res_dict['gini'] = gini_index_a
                 res_dict['a'] = col
                 res_dict['parent'] = parent
-        res_dict['depth'] += 1
-
-        # 深度判断
-        if res_dict['depth'] >= self.depth:
-            return 1
         
         # 剪枝判断
-
+        pass
         
         # 继续划分
-        a_unique_values = df[res_dict['a']].unique()
+        a_unique_values = X[res_dict['a']].unique()
+        print(a_unique_values)
         for a_value in a_unique_values:
-            v_df = df.loc[df[res_dict['a']]==a_value]
-            res_dict['data'] = list(v_df.index)
+            X_v = X.loc[X[res_dict['a']]==a_value]  # get dv
+            y_v = y[list(X_v.index)]
+
+            # 对NULL值进行处理
+            if a_value == 'NULL':
+                # 将该样本放入所有兄弟姐妹节点中，并添加对应的权重
+                pass
+
+            res_dict['data'] = list(X_v.index)
             res_dict['a_v'] = res_dict['a'] + '-' + a_value
+            new_node = Node(
+                name=res_dict['a_v'],
+                parent=parent,
+                target_value=y_v.value_counts().index[0]
+            )
+            print(new_node)
+
+            # 深度判断
+            if new_node.depth > self.depth:
+                return 1
 
             # update self.tree
             rv = self.separate(
-                X=v_df.loc[:, [x for x in list(v_df.columns) if x != 'target']], 
-                y=v_df['target'], 
-                parent_node=res_dict,
-                parent=res_dict['a'] + '-' + a_value
+                X=X_v, 
+                y=y_v, 
+                parent=new_node
             )
             if rv == 1:
-                self.tree.append({'a': res_dict['a'], 'parent': res_dict['parent'], 'counter': dict(Counter(v_df['target'])),
-                                  'depth': res_dict['depth']})
+                self.tree.append({'a': res_dict['a'], 'parent': res_dict['parent']})
     
     def fit(self, X, y, prune='pre'):
         """
         拟合CART
         """
-        # init res_node
-        init_node = {
-            'a': 'all',
-            'gini': 999,
-            'a_v': 'root',
-            'depth': 0,
-            'parent': 'root',
-        }
-        self.separate(X, y, init_node)
+        self.node = Node(
+            name='root'
+        )
+        self.separate(X, y, self.node)
 
 
 def gini(y) -> float:
@@ -154,4 +164,4 @@ print(df)
 
 cart = CART()
 cart.fit(X, y)
-pprint(cart.tree)
+pprint(cart.node.children)
