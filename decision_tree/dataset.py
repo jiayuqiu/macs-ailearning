@@ -51,17 +51,17 @@ def load_watermelon_2() -> pd.DataFrame:
                   '硬滑']
 
     # 是否好瓜，1: 是，0: 否
-    target_list = [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    target_list = ['好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜']
 
     # init df
-    df = pd.DataFrame(columns=['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', 'target'])
+    df = pd.DataFrame(columns=['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', '好瓜'])
     df['色泽'] = color_list
     df['根蒂'] = root_list
     df['敲声'] = sound_list
     df['纹理'] = texture_list
     df['脐部'] = navel_list
     df['触感'] = touch_list
-    df['target'] = target_list
+    df['好瓜'] = target_list
     return df
 
 
@@ -102,17 +102,17 @@ def load_watermelon_2_alpha() -> pd.DataFrame:
                   '硬滑']
 
     # 是否好瓜，1: 是，0: 否
-    target_list = [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    target_list = ['好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '好瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜', '坏瓜']
 
     # init df
-    df = pd.DataFrame(columns=['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', 'target'])
+    df = pd.DataFrame(columns=['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', '好瓜'])
     df['色泽'] = color_list
     df['根蒂'] = root_list
     df['敲声'] = sound_list
     df['纹理'] = texture_list
     df['脐部'] = navel_list
     df['触感'] = touch_list
-    df['target'] = target_list
+    df['好瓜'] = target_list
     return df
 
 
@@ -137,4 +137,4 @@ def load_watermelon_3() -> pd.DataFrame:
     
     df['密度'] = density_list
     df['含糖量'] = sugar_list
-    return df
+    return df.loc[:, ['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', '密度', '含糖量', '好瓜']]

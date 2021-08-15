@@ -9,15 +9,25 @@
 '''
 
 # here put the import lib
+from math import inf
 import pandas as pd
 import numpy as np
 
 from pprint import pprint
 from collections import Counter
-from dataset import load_watermelon_2_alpha
+from dataset import load_watermelon_3
 # from sklearn.tree import DecisionTreeClassifier
 
 from anytree import Node
+
+
+# class RowSample(object):
+#     def __init__(self, tid, weight, row_series, row_target) -> None:
+#         self.tid = tid
+#         self.weight = weight
+#         self.row_series = row_series
+#         self.row_target = row_target
+#         super().__init__()
 
 
 class CART(object):
@@ -27,72 +37,46 @@ class CART(object):
         self.depth = 5
         super().__init__()
     
-    def separate(self, X, y, parent, depth=1):
-        min_gini = 9999
-        res_dict = {}
+    def generate_tree(self, D, a, p_value):
+        """生成树
 
-        if X.shape[0] == 0:
-            # 若无数据输入
-            return 1
-        elif y.nunique() == 1:
-            # 若多类型
-            return 1
+        Args:
+            D ([type]): [样本集合]
+            a ([type]): [划分属性]
+            p_value ([type]): [父节点取值]
 
-        for _, col in enumerate(X.columns):  # 对每个属性进行划分
-            gini_index_a = gini_index(
-                X, y, col
-            )
-            if gini_index_a < min_gini:
-                min_gini = gini_index_a
-                res_dict['gini'] = gini_index_a
-                res_dict['a'] = col
-                res_dict['parent'] = parent
+        Returns:
+            [type]: [description]
+        """
+        # init tree
+        node = Node(p_value)
+
+        # 判断 样本集合是否都是同一样本
+        D_unique = D.drop_duplicates(keep=False)
+        if D_unique.shape[0] == 0:
+            # 样本全部相同，返回树
+            node.target = D['好瓜'].value_counts().index[0]  # 返回标签频次最高对应的值
+            return node
         
-        # 剪枝判断
-        pass
-        
-        # 继续划分
-        a_unique_values = X[res_dict['a']].unique()
-        print(a_unique_values)
-        for a_value in a_unique_values:
-            X_v = X.loc[X[res_dict['a']]==a_value]  # get dv
-            y_v = y[list(X_v.index)]
+        # 判断 样本中标签是否完全相同
+        if D['好瓜'].nunique() == 1:
+            # 所有样本对应标签都一致，返回树
+            node.target = D['好瓜'].values[0]
+            return node
 
-            # 对NULL值进行处理
-            if a_value == 'NULL':
-                # 将该样本放入所有兄弟姐妹节点中，并添加对应的权重
-                pass
+        # 计算样本中gini指数最小的属性，作为最优划分属性
+        gini_index = float(inf)
+        best_attr = 'x'
 
-            res_dict['data'] = list(X_v.index)
-            res_dict['a_v'] = res_dict['a'] + '-' + a_value
-            new_node = Node(
-                name=res_dict['a_v'],
-                parent=parent,
-                target_value=y_v.value_counts().index[0]
-            )
-            print(new_node)
+        for _, a in enumerate(list(D.columns)):  # 逐个属性进行计算gini指数
+            pass
 
-            # 深度判断
-            if new_node.depth > self.depth:
-                return 1
-
-            # update self.tree
-            rv = self.separate(
-                X=X_v, 
-                y=y_v, 
-                parent=new_node
-            )
-            if rv == 1:
-                self.tree.append({'a': res_dict['a'], 'parent': res_dict['parent']})
     
-    def fit(self, X, y, prune='pre'):
+    def fit(self, X, y):
         """
         拟合CART
         """
-        self.node = Node(
-            name='root'
-        )
-        self.separate(X, y, self.node)
+        self.generate_tree(X, y, 'root')
 
 
 def gini(y) -> float:
@@ -115,6 +99,7 @@ def gini(y) -> float:
         pk_square_sum += (pk ** 2)
     gini = 1 - pk_square_sum
     return gini
+
 
 def gini_index(X, y, flag: str) -> float:
     """对属性a的基尼指数
@@ -140,9 +125,6 @@ def gini_index(X, y, flag: str) -> float:
 
         X_dv = X.loc[av_index, :]
         y_dv = y.loc[av_index]
-
-        # 对缺失值进行处理，测试数据中，av = 0，则为缺失。
-        # 将该样本按权重放入所有分支中
         
         dv_gini = gini(y_dv)
         gini_value += (per * dv_gini)
@@ -156,12 +138,11 @@ def after_prune_fit():
     pass
 
 
-df = load_watermelon_2_alpha()
+df = load_watermelon_3()
 df.fillna('NULL', inplace=True)
-X = df.loc[:, [x for x in list(df.columns) if x != 'target']]
+X = df.loc[:, [x for x in list(df.columns) if x != '好瓜']]
 y = df.target
 print(df)
 
 cart = CART()
 cart.fit(X, y)
-pprint(cart.node.children)
