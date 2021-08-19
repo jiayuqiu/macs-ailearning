@@ -5,7 +5,7 @@
 @Author  :   qiujiayu 
 @Version :   1.0
 @Contact :   qiujy@highlander.com.cn
-@Desc    :   CART demo
+@Desc    :   CART demo 没有考虑缺失值与连续属性的情况
 '''
 
 # here put the import lib
@@ -15,68 +15,20 @@ import numpy as np
 
 from pprint import pprint
 from collections import Counter
-from dataset import load_watermelon_3
+from utils.dataset import load_watermelon_2
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 # from sklearn.tree import DecisionTreeClassifier
 
-from anytree import Node
 
-
-# class RowSample(object):
-#     def __init__(self, tid, weight, row_series, row_target) -> None:
-#         self.tid = tid
-#         self.weight = weight
-#         self.row_series = row_series
-#         self.row_target = row_target
-#         super().__init__()
-
-
-class CART(object):
-    def __init__(self, depth=5) -> None:
-        # self.shape = (X.shape[0], X.shape[1] + 1)
-        self.tree = list()
-        self.depth = 5
-        super().__init__()
-    
-    def generate_tree(self, D, a, p_value):
-        """生成树
-
-        Args:
-            D ([type]): [样本集合]
-            a ([type]): [划分属性]
-            p_value ([type]): [父节点取值]
-
-        Returns:
-            [type]: [description]
-        """
-        # init tree
-        node = Node(p_value)
-
-        # 判断 样本集合是否都是同一样本
-        D_unique = D.drop_duplicates(keep=False)
-        if D_unique.shape[0] == 0:
-            # 样本全部相同，返回树
-            node.target = D['好瓜'].value_counts().index[0]  # 返回标签频次最高对应的值
-            return node
-        
-        # 判断 样本中标签是否完全相同
-        if D['好瓜'].nunique() == 1:
-            # 所有样本对应标签都一致，返回树
-            node.target = D['好瓜'].values[0]
-            return node
-
-        # 计算样本中gini指数最小的属性，作为最优划分属性
-        gini_index = float(inf)
-        best_attr = 'x'
-
-        for _, a in enumerate(list(D.columns)):  # 逐个属性进行计算gini指数
-            pass
-
-    
-    def fit(self, X, y):
-        """
-        拟合CART
-        """
-        self.generate_tree(X, y, 'root')
+class Node(object):
+    def __init__(self,title):
+        self.title = title     # 上一级指向该节点的线上的标记文字
+        self.v = 1              # 节点的信息标记
+        self.children = []     # 节点的孩子列表
+        self.deep = 0         # 节点深度
+        self.ID = -1         # 节点编号
+        self.leaf = False
 
 
 def gini(y) -> float:
@@ -131,18 +83,184 @@ def gini_index(X, y, flag: str) -> float:
     return gini_value
 
 
-def pre_prune_fit():
-    pass
+class CART(object):
+    def __init__(self, depth=5) -> None:
+        # self.shape = (X.shape[0], X.shape[1] + 1)
+        # self.tree = list()
+        self.depth = depth
+        super().__init__()
+    
+    def generate_tree(self, D, attr_used_list: list, p_value: str):
+        """生成树
 
-def after_prune_fit():
-    pass
+        Args:
+            D ([type]): [样本集合]
+            attr_used_list ([list]): [已经被使用过的划分]
+            p_value ([str]): [父节点取值]
+
+        Returns:
+            [type]: [description]
+        """
+        # init tree
+        node = Node(p_value)
+
+        # 判断 样本集合是否都是同一样本
+        D_unique = D.drop_duplicates(keep=False)
+        if D_unique.shape[0] == 0:
+            # 样本全部相同，返回树
+            node.v = D['好瓜'].value_counts().index[0]  # 返回标签频次最高对应的值
+            node.leaf = True
+            return node
+        
+        # 判断 样本中标签是否完全相同
+        if D['好瓜'].nunique() == 1:
+            # 所有样本对应标签都一致，返回树
+            node.v = D['好瓜'].values[0]
+            node.leaf = True
+            return node
+
+        # 计算样本中gini指数最小的属性，作为最优划分属性
+        min_gini_index = float(inf)
+        best_attr = 'x'
+
+        # 获取没有划分过的属性
+        X_columns = []
+        for attr in self.attr_value_dict.keys():
+            if self.attr_value_dict[attr]['used'] == False:
+                X_columns.append(attr)
+
+        for _, a in enumerate(X_columns):  # 逐个属性进行计算gini指数
+            X = D.loc[:, X_columns]
+            y = D['好瓜']
+            a_gini_value = gini_index(X, y, a)
+            if a_gini_value < min_gini_index:
+                min_gini_index = a_gini_value
+                best_attr = a
+                if min_gini_index == 0:
+                    # print(X)
+                    # print(y)
+                    # print(y.value_counts())
+                    # print(1)
+                    pass
+        
+        print(min_gini_index, best_attr)
+        if best_attr != 'x':
+            # 成功获取最优划分
+            node.v = f"{best_attr}=?"
+            
+            # 对划分中的每个取值，再生成节点
+            for a in self.attr_value_dict[best_attr]['value']:
+                # print(a)
+                # print(D[best_attr])
+                Dv = D.loc[D[best_attr]==a, :]
+                # print(Dv)
+                if Dv.shape[0] == 0:
+                    # 最优划分上，无对应取值，该分支达到叶子节点
+                    next_node = Node(a)
+                    next_node.v = D['好瓜'].value_counts().index[0]
+                    next_node.leaf = True
+                    node.children.append(next_node)
+                else:
+                    # 继续划分
+                    self.attr_value_dict[best_attr]['used'] = True
+                    node.children.append(self.generate_tree(Dv, [], a))
+        return node
+    
+    def fit(self, D):
+        """
+        拟合CART
+        """
+        # 获取每个attr上，对应的取值
+        attr_list = [x for x in list(D.columns) if x != '好瓜']
+        self.attr_value_dict = {}
+        for attr in attr_list:
+            self.attr_value_dict[attr] = {'value': D[attr].unique(), 'used': False}
+        print(self.attr_value_dict)
+        
+        attr_used_list = [1] * len(attr_list)
+        my_tree = self.generate_tree(D, attr_used_list, 'root')
+        return my_tree
 
 
-df = load_watermelon_3()
+def countLeaf(root,deep):
+    root.deep = deep
+    res = 0
+    if root.v=='好瓜' or root.v=='坏瓜':   # 说明此时已经是叶子节点了，所以直接返回
+        res += 1
+        return res,deep
+    curdeep = deep             # 记录当前深度
+    for i in root.children:    # 得到子树中的深度和叶子节点的个数
+        a,b = countLeaf(i,deep+1)
+        res += a
+        if b>curdeep: curdeep = b
+    return res,curdeep
+ 
+def giveLeafID(root,ID):         # 给叶子节点编号
+    if root.v=='好瓜' or root.v=='坏瓜':
+        root.ID = ID
+        ID += 1
+        return ID
+    for i in root.children:
+        ID = giveLeafID(i,ID)
+    return ID
+ 
+def plotNode(nodeTxt,centerPt,parentPt,nodeType):     # 绘制节点
+    plt.annotate(nodeTxt,xy = parentPt,xycoords='axes fraction',xytext=centerPt,
+                 textcoords='axes fraction',va="center",ha="center",bbox=nodeType,
+                 arrowprops=arrow_args)
+ 
+def dfsPlot(root):
+    if root.ID==-1:          # 说明根节点不是叶子节点
+        childrenPx = []
+        meanPx = 0
+        for i in root.children:
+            cur = dfsPlot(i)
+            meanPx += cur
+            childrenPx.append(cur)
+        meanPx = meanPx/len(root.children)
+        c = 0
+        for i in root.children:
+            nodetype = leafNode
+            if i.ID<0: nodetype=decisionNode
+            plotNode(i.v,(childrenPx[c],0.9-i.deep*0.8/deep),(meanPx,0.9-root.deep*0.8/deep),nodetype)
+            plt.text((childrenPx[c]+meanPx)/2,(0.9-i.deep*0.8/deep+0.9-root.deep*0.8/deep)/2,i.title)
+            c += 1
+        return meanPx
+    else:
+        return 0.1+root.ID*0.8/(cnt-1)
+
+
+df = load_watermelon_2()
 df.fillna('NULL', inplace=True)
-X = df.loc[:, [x for x in list(df.columns) if x != '好瓜']]
-y = df.target
+# X = df.loc[:, [x for x in list(df.columns) if x != '好瓜']]
+# y = df['好瓜']
 print(df)
 
 cart = CART()
-cart.fit(X, y)
+my_tree = cart.fit(df)
+cnt, deep = countLeaf(my_tree,0)     # 得到树的深度和叶子节点的个数
+print(cnt, deep)
+
+def plot_tree(my_tree):
+    for child in my_tree.children:
+        print(f"parent = {my_tree.title}")
+        if child.leaf:
+            print(child.v)
+        else:
+            plot_tree(child)
+
+# plot_tree(my_tree)
+
+# 绘制决策树
+mpl.rcParams[u'font.sans-serif'] = ['simhei']
+mpl.rcParams['axes.unicode_minus'] = False
+
+giveLeafID(my_tree,0)
+decisionNode = dict(boxstyle = "sawtooth",fc = "0.9",color='blue')
+leafNode = dict(boxstyle = "round4",fc="0.9",color='red')
+arrow_args = dict(arrowstyle = "<-",color='green')
+fig = plt.figure(1,facecolor='white')
+rootX = dfsPlot(my_tree)
+plotNode(my_tree.v,(rootX,0.9),(rootX,0.9),decisionNode)
+plt.show()
+

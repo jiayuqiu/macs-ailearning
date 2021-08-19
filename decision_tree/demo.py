@@ -5,7 +5,7 @@ import copy
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from dataset import load_watermelon_3
+from utils.dataset import load_watermelon_3
 
 mpl.rcParams[u'font.sans-serif'] = ['simhei']
 mpl.rcParams['axes.unicode_minus'] = False
