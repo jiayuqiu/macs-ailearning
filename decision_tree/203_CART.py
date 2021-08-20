@@ -252,8 +252,8 @@ def plot_tree(my_tree):
 # plot_tree(my_tree)
 
 # 绘制决策树
-mpl.rcParams[u'font.sans-serif'] = ['simhei']
-mpl.rcParams['axes.unicode_minus'] = False
+plt.rcParams['font.sans-serif'] = ['Simhei']
+plt.rcParams['axes.unicode_minus'] = False
 
 giveLeafID(my_tree,0)
 decisionNode = dict(boxstyle = "sawtooth",fc = "0.9",color='blue')
