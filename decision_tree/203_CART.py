@@ -15,7 +15,7 @@ import numpy as np
 
 from pprint import pprint
 from collections import Counter
-from utils.dataset import load_watermelon_2
+from utils.dataset import load_watermelon_2, load_watermelon_2_alpha
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 # from sklearn.tree import DecisionTreeClassifier
@@ -59,28 +59,34 @@ def gini_index(X, y, flag: str) -> float:
     Args:
         X ([type]): [特征]
         y ([type]): [标签]
-        flag (str): [属性a对应的列名]
+        flag (str): [属性a对应的列名] 
 
     Returns:
         float: [属性a的基尼指数]
     """
     d_size = X.shape[0]  # 样本数量
-    Av = list(set((X[flag])))  # 在属性a上，a对应的取值列表
+    Av = [x for x in list(set((X[flag]))) if x != 'NULL']  # 在属性a上，a对应的取值列表
     Av_size = len(Av)  # 在属性a上，a对应的取值数量
-    Av_counter_dict = dict(Counter(X[flag]))  # 对Av进行统计
+
+    # 计算在rho：在该属性上，非空取值占比
+    X_not_null = [x for x in X[flag] if x != 'NULL']
+    rho = len(X_not_null) / d_size
+    Av_counter_dict = dict(Counter(X_not_null))  # 对Av进行统计
 
     gini_value = 0
     for _, av in enumerate(Av):  # 统计属性a上，每个取值对应的gini指数
-        per = Av_counter_dict[av] / d_size
+        # per = Av_counter_dict[av] / d_size  # 无缺失值情况
+        per = Av_counter_dict[av] / len(X_not_null)
         a_col = X[flag]
-        av_index = ~a_col.where(a_col == av).isna()  # 样本 在属性a上 取值 为 av 的样本索引
+        # av_index = ~a_col.where(a_col == av).isna()  # 样本 在属性a上 取值 为 av 的样本索引
+        av_index = a_col == av
 
         X_dv = X.loc[av_index, :]
         y_dv = y.loc[av_index]
         
         dv_gini = gini(y_dv)
         gini_value += (per * dv_gini)
-    return gini_value
+    return rho * gini_value
 
 
 class CART(object):
@@ -136,24 +142,17 @@ class CART(object):
             if a_gini_value < min_gini_index:
                 min_gini_index = a_gini_value
                 best_attr = a
-                if min_gini_index == 0:
-                    # print(X)
-                    # print(y)
-                    # print(y.value_counts())
-                    # print(1)
-                    pass
         
-        print(min_gini_index, best_attr)
         if best_attr != 'x':
             # 成功获取最优划分
             node.v = f"{best_attr}=?"
             
             # 对划分中的每个取值，再生成节点
+            # 找出在属性best_attr上，取值为空的样本
+            Dv_null = D.loc[D[best_attr]=='NULL']
+
             for a in self.attr_value_dict[best_attr]['value']:
-                # print(a)
-                # print(D[best_attr])
                 Dv = D.loc[D[best_attr]==a, :]
-                # print(Dv)
                 if Dv.shape[0] == 0:
                     # 最优划分上，无对应取值，该分支达到叶子节点
                     next_node = Node(a)
@@ -171,7 +170,7 @@ class CART(object):
         拟合CART
         """
         # 获取每个attr上，对应的取值
-        attr_list = [x for x in list(D.columns) if x != '好瓜']
+        attr_list = [x for x in list(D.columns) if (x != '好瓜') | (x != '权重')]
         self.attr_value_dict = {}
         for attr in attr_list:
             self.attr_value_dict[attr] = {'value': D[attr].unique(), 'used': False}
@@ -230,7 +229,8 @@ def dfsPlot(root):
         return 0.1+root.ID*0.8/(cnt-1)
 
 
-df = load_watermelon_2()
+df = load_watermelon_2_alpha()
+df.loc[:, '权重'] = [1] * df.shape[0]
 df.fillna('NULL', inplace=True)
 # X = df.loc[:, [x for x in list(df.columns) if x != '好瓜']]
 # y = df['好瓜']
