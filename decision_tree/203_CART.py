@@ -22,7 +22,7 @@ import matplotlib as mpl
 
 
 class Node(object):
-    def __init__(self,title):
+    def __init__(self, title):
         self.title = title     # 上一级指向该节点的线上的标记文字
         self.v = 'yyy'              # 节点的信息标记
         self.children = []     # 节点的孩子列表
@@ -127,6 +127,8 @@ class CART(object):
             [type]: [description]
         """
         # init tree
+        if p_value == '平坦':
+            pass
         node = Node(p_value)
 
         # 判断 样本集合是否都是同一样本
@@ -141,10 +143,7 @@ class CART(object):
         # 判断 样本中标签是否完全相同
         if D['好瓜'].nunique() == 1:
             # 所有样本对应标签都一致，返回树
-            print(D)
-            print(D['好瓜'].unique())
             node.v = D['好瓜'].values[0]
-            print(node.v)
             node.leaf = True
             return node
 
@@ -168,15 +167,13 @@ class CART(object):
         
         if best_attr != 'x':
             # 成功获取最优划分
-            print(f"{best_attr}=?")
             node.v = f"{best_attr}=?"
-            print(node.v)
-            print(f"best_attr = {best_attr}")
             
             # 对划分中的每个取值，再生成节点
             # 找出在属性best_attr上，取值为空的样本
             Dv_null_df = D.loc[D[best_attr]=='NULL']
             for a in self.attr_value_dict[best_attr]['value']:
+                print(a, type(a), a == '平坦')
                 Dv = D.loc[D[best_attr]==a, :]
                 # 求出rv，在a上，取值为av，且在a上无缺失的样本比例
                 av_size = Dv.shape[0]
@@ -283,7 +280,7 @@ def plot_tree(my_tree):
         if child.leaf:
             print(child.v)
         else:
-            print(child.v)
+            print(child.children)
             plot_tree(child)
 
 plot_tree(my_tree)
