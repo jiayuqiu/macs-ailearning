@@ -24,7 +24,7 @@ import matplotlib as mpl
 class Node(object):
     def __init__(self,title):
         self.title = title     # 上一级指向该节点的线上的标记文字
-        self.v = 1              # 节点的信息标记
+        self.v = 'yyy'              # 节点的信息标记
         self.children = []     # 节点的孩子列表
         self.deep = 0         # 节点深度
         self.ID = -1         # 节点编号
@@ -134,6 +134,7 @@ class CART(object):
         if D_unique.shape[0] == 0:
             # 样本全部相同，返回树
             node.v = D['好瓜'].value_counts().index[0]  # 返回标签频次最高对应的值
+            print(node.v)
             node.leaf = True
             return node
         
@@ -143,6 +144,7 @@ class CART(object):
             print(D)
             print(D['好瓜'].unique())
             node.v = D['好瓜'].values[0]
+            print(node.v)
             node.leaf = True
             return node
 
@@ -168,6 +170,7 @@ class CART(object):
             # 成功获取最优划分
             print(f"{best_attr}=?")
             node.v = f"{best_attr}=?"
+            print(node.v)
             print(f"best_attr = {best_attr}")
             
             # 对划分中的每个取值，再生成节点
@@ -187,13 +190,14 @@ class CART(object):
                     next_node = Node(a)
                     print(self.cal_weights(D))
                     next_node.v = self.cal_weights(D)
+                    print(next_node.v)
                     next_node.leaf = True
                     node.children.append(next_node)
                 else:
                     # 继续划分
+                    print(f"next parent name = {a}")
                     self.attr_value_dict[best_attr]['used'] = True
                     Dv_next = pd.concat([Dv, Dv_null_df])
-                    print(Dv_next)
                     node.children.append(self.generate_tree(Dv_next, [], a))
         return node
     
@@ -279,19 +283,23 @@ def plot_tree(my_tree):
         if child.leaf:
             print(child.v)
         else:
+            print(child.v)
             plot_tree(child)
+
 plot_tree(my_tree)
+# for node in my_tree:
+#     print(node)
 
-# 绘制决策树
-plt.rcParams['font.sans-serif'] = ['Simhei']
-plt.rcParams['axes.unicode_minus'] = False
-
-giveLeafID(my_tree,0)
-decisionNode = dict(boxstyle = "sawtooth",fc = "0.9",color='blue')
-leafNode = dict(boxstyle = "round4",fc="0.9",color='red')
-arrow_args = dict(arrowstyle = "<-",color='green')
-fig = plt.figure(1,facecolor='white')
-rootX = dfsPlot(my_tree)
-plotNode(my_tree.v,(rootX,0.9),(rootX,0.9),decisionNode)
-plt.show()
+# # 绘制决策树
+# plt.rcParams['font.sans-serif'] = ['Simhei']
+# plt.rcParams['axes.unicode_minus'] = False
+#
+# giveLeafID(my_tree,0)
+# decisionNode = dict(boxstyle = "sawtooth",fc = "0.9",color='blue')
+# leafNode = dict(boxstyle = "round4",fc="0.9",color='red')
+# arrow_args = dict(arrowstyle = "<-",color='green')
+# fig = plt.figure(1,facecolor='white')
+# rootX = dfsPlot(my_tree)
+# plotNode(my_tree.v,(rootX,0.9),(rootX,0.9),decisionNode)
+# plt.show()
 
