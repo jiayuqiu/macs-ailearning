@@ -31,61 +31,58 @@ class Node(object):
         self.leaf = False
 
 
-def gini(y) -> float:
+def get_rho(D, flag):
+    """get rho by weights"""
+    d_size = sum(D['权重'])
+    a_not_null_size = sum(D.loc[D[flag]!='NULL']['权重'])
+    return a_not_null_size / d_size
+
+
+def get_pk(D, flag, target):
+    """get pk"""
+    a_not_null_size = sum(D.loc[D[flag]!='NULL']['权重'])
+    tk_size = sum(D.loc[D['好瓜']==target]['权重'])
+    return tk_size / a_not_null_size
+
+
+def get_rv(D, flag, av):
+    """get rv"""
+    a_not_null_size = sum(D.loc[D[flag]!='NULL']['权重'])
+    av_size = sum(D.loc[D[flag]==av]['权重'])
+    return av_size / a_not_null_size
+
+
+def gini(D, flag) -> float:
     """基尼指数，计算样本纯度
-
-    基尼指数越小，则说明数据集纯度越高(样本中可分类的数据越少)。
-
-    Args:
-        y : [样本标签]
-
-    Returns:
-        float: [样本纯度对应的基尼指数]]
     """
+    y = D['好瓜']
     target_counter_dict = dict(Counter(y))
-    target_size = len(y)
 
     pk_square_sum = 0
     for target_value in target_counter_dict.keys():
-        pk = target_counter_dict[target_value] / target_size
+        pk = get_pk(D, flag, target_value)
         pk_square_sum += (pk ** 2)
     gini = 1 - pk_square_sum
     return gini
 
 
-def gini_index(X, y, flag: str) -> float:
+def gini_index(D, flag: str) -> float:
     """对属性a的基尼指数
-
-    Args:
-        X ([type]): [特征]
-        y ([type]): [标签]
-        flag (str): [属性a对应的列名] 
-
-    Returns:
-        float: [属性a的基尼指数]
     """
-    d_size = X.shape[0]  # 样本数量
-    Av = [x for x in list(set((X[flag]))) if x != 'NULL']  # 在属性a上，a对应的取值列表
-    Av_size = len(Av)  # 在属性a上，a对应的取值数量
+    y = D['好瓜']
+    Av = [x for x in list(set((D[flag]))) if x != 'NULL']  # 在属性a上，a对应的取值列表
 
-    # 计算在rho：在该属性上，非空取值占比
-    X_not_null = [x for x in X[flag] if x != 'NULL']
-    rho = len(X_not_null) / d_size
-    Av_counter_dict = dict(Counter(X_not_null))  # 对Av进行统计
+    # 计算在rho：在该属性上，非空取值权重占比
+    rho = get_rho(D, flag)
 
     gini_value = 0
     for _, av in enumerate(Av):  # 统计属性a上，每个取值对应的gini指数
-        # per = Av_counter_dict[av] / d_size  # 无缺失值情况
-        per = Av_counter_dict[av] / len(X_not_null)
-        a_col = X[flag]
-        # av_index = ~a_col.where(a_col == av).isna()  # 样本 在属性a上 取值 为 av 的样本索引
+        rv = get_rv(D, flag, av)  # 计算rv，av为非空时，权重的占比
+        a_col = D[flag]
         av_index = a_col == av
 
-        X_dv = X.loc[av_index, :]
-        y_dv = y.loc[av_index]
-        
-        dv_gini = gini(y_dv)
-        gini_value += (per * dv_gini)
+        dv_gini = gini(D.loc[av_index], flag)
+        gini_value += (rv * dv_gini)
     return rho * gini_value
 
 
@@ -127,8 +124,6 @@ class CART(object):
             [type]: [description]
         """
         # init tree
-        if p_value == '平坦':
-            pass
         node = Node(p_value)
 
         # 判断 样本集合是否都是同一样本
@@ -160,7 +155,7 @@ class CART(object):
         for _, a in enumerate(X_columns):  # 逐个属性进行计算gini指数
             X = D.loc[:, X_columns]
             y = D['好瓜']
-            a_gini_value = gini_index(X, y, a)
+            a_gini_value = gini_index(D, a)
             if a_gini_value < min_gini_index:
                 min_gini_index = a_gini_value
                 best_attr = a
@@ -185,7 +180,6 @@ class CART(object):
                 if Dv.shape[0] == 0:
                     # 最优划分上，无对应取值，该分支达到叶子节点
                     next_node = Node(a)
-                    print(self.cal_weights(D))
                     next_node.v = self.cal_weights(D)
                     print(next_node.v)
                     next_node.leaf = True
@@ -194,8 +188,21 @@ class CART(object):
                     # 继续划分
                     print(f"next parent name = {a}")
                     self.attr_value_dict[best_attr]['used'] = True
-                    Dv_next = pd.concat([Dv, Dv_null_df])
-                    node.children.append(self.generate_tree(Dv_next, [], a))
+
+                    # 检查该属性使用后，是否再无可用属性
+                    X_columns = []
+                    for attr in self.attr_value_dict.keys():
+                        if self.attr_value_dict[attr]['used'] == False:
+                            X_columns.append(attr)
+
+                    if len(X_columns) == 0:
+                        next_node = Node(a)
+                        next_node.v = self.cal_weights(D)
+                        next_node.leaf = True
+                        node.children.append(next_node)
+                    else:
+                        Dv_next = pd.concat([Dv, Dv_null_df])
+                        node.children.append(self.generate_tree(Dv_next, [], a))
         return node
     
     def fit(self, D):
@@ -206,6 +213,8 @@ class CART(object):
         attr_list = [x for x in list(D.columns) if not ((x == '好瓜') | (x == '权重'))]
         self.attr_value_dict = {}
         for attr in attr_list:
+            # 此处标记，为体现算法的大致思路，若属性全部使用，则树生成完毕。、
+            # 也可根据用depth来判断树是否生成结束
             not_null_value_list = D[attr][D[attr]!='NULL'].unique()
             self.attr_value_dict[attr] = {'value': not_null_value_list, 'used': False}
         print(self.attr_value_dict)
@@ -283,20 +292,20 @@ def plot_tree(my_tree):
             print(child.children)
             plot_tree(child)
 
-plot_tree(my_tree)
+# plot_tree(my_tree)
 # for node in my_tree:
 #     print(node)
 
-# # 绘制决策树
-# plt.rcParams['font.sans-serif'] = ['Simhei']
-# plt.rcParams['axes.unicode_minus'] = False
-#
-# giveLeafID(my_tree,0)
-# decisionNode = dict(boxstyle = "sawtooth",fc = "0.9",color='blue')
-# leafNode = dict(boxstyle = "round4",fc="0.9",color='red')
-# arrow_args = dict(arrowstyle = "<-",color='green')
-# fig = plt.figure(1,facecolor='white')
-# rootX = dfsPlot(my_tree)
-# plotNode(my_tree.v,(rootX,0.9),(rootX,0.9),decisionNode)
-# plt.show()
+# 绘制决策树
+plt.rcParams['font.sans-serif'] = ['Simhei']
+plt.rcParams['axes.unicode_minus'] = False
+
+giveLeafID(my_tree,0)
+decisionNode = dict(boxstyle = "sawtooth",fc = "0.9",color='blue')
+leafNode = dict(boxstyle = "round4",fc="0.9",color='red')
+arrow_args = dict(arrowstyle = "<-",color='green')
+fig = plt.figure(1,facecolor='white')
+rootX = dfsPlot(my_tree)
+plotNode(my_tree.v,(rootX,0.9),(rootX,0.9),decisionNode)
+plt.show()
 
