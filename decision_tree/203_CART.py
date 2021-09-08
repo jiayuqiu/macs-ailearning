@@ -95,6 +95,25 @@ class CART(object):
         # self.tree = list()
         self.depth = depth
         super().__init__()
+
+    def cal_weights(self, D):
+        good_df = D.loc[D['好瓜']=='好瓜']
+        bad_df = D.loc[D['好瓜']=='坏瓜']
+
+        if good_df.shape[0] == 0:
+            good_weights_sum = 0
+        else:
+            good_weights_sum = sum(good_df['权重'])
+
+        if bad_df.shape[0] == 0:
+            bad_weights_sum = 0
+        else:
+            bad_weights_sum = sum(bad_df['权重'])
+
+        if good_weights_sum >= bad_weights_sum:
+            return '好瓜'
+        else:
+            return '坏瓜'
     
     def generate_tree(self, D, attr_used_list: list, p_value: str):
         """生成树
@@ -121,6 +140,8 @@ class CART(object):
         # 判断 样本中标签是否完全相同
         if D['好瓜'].nunique() == 1:
             # 所有样本对应标签都一致，返回树
+            print(D)
+            print(D['好瓜'].unique())
             node.v = D['好瓜'].values[0]
             node.leaf = True
             return node
@@ -145,24 +166,35 @@ class CART(object):
         
         if best_attr != 'x':
             # 成功获取最优划分
+            print(f"{best_attr}=?")
             node.v = f"{best_attr}=?"
+            print(f"best_attr = {best_attr}")
             
             # 对划分中的每个取值，再生成节点
             # 找出在属性best_attr上，取值为空的样本
-            Dv_null = D.loc[D[best_attr]=='NULL']
-
+            Dv_null_df = D.loc[D[best_attr]=='NULL']
             for a in self.attr_value_dict[best_attr]['value']:
                 Dv = D.loc[D[best_attr]==a, :]
+                # 求出rv，在a上，取值为av，且在a上无缺失的样本比例
+                av_size = Dv.shape[0]
+                D_null_size = D.loc[D[best_attr]!='NULL', :].shape[0]
+                rv = av_size / D_null_size
+
+                # 更新样本权重
+                Dv_null_df.loc[:, '权重'] = Dv_null_df['权重'] * rv
                 if Dv.shape[0] == 0:
                     # 最优划分上，无对应取值，该分支达到叶子节点
                     next_node = Node(a)
-                    next_node.v = D['好瓜'].value_counts().index[0]
+                    print(self.cal_weights(D))
+                    next_node.v = self.cal_weights(D)
                     next_node.leaf = True
                     node.children.append(next_node)
                 else:
                     # 继续划分
                     self.attr_value_dict[best_attr]['used'] = True
-                    node.children.append(self.generate_tree(Dv, [], a))
+                    Dv_next = pd.concat([Dv, Dv_null_df])
+                    print(Dv_next)
+                    node.children.append(self.generate_tree(Dv_next, [], a))
         return node
     
     def fit(self, D):
@@ -170,10 +202,11 @@ class CART(object):
         拟合CART
         """
         # 获取每个attr上，对应的取值
-        attr_list = [x for x in list(D.columns) if (x != '好瓜') | (x != '权重')]
+        attr_list = [x for x in list(D.columns) if not ((x == '好瓜') | (x == '权重'))]
         self.attr_value_dict = {}
         for attr in attr_list:
-            self.attr_value_dict[attr] = {'value': D[attr].unique(), 'used': False}
+            not_null_value_list = D[attr][D[attr]!='NULL'].unique()
+            self.attr_value_dict[attr] = {'value': not_null_value_list, 'used': False}
         print(self.attr_value_dict)
         
         attr_used_list = [1] * len(attr_list)
@@ -216,6 +249,7 @@ def dfsPlot(root):
             cur = dfsPlot(i)
             meanPx += cur
             childrenPx.append(cur)
+        print(f"root.v = {root.v}")
         meanPx = meanPx/len(root.children)
         c = 0
         for i in root.children:
@@ -232,8 +266,6 @@ def dfsPlot(root):
 df = load_watermelon_2_alpha()
 df.loc[:, '权重'] = [1] * df.shape[0]
 df.fillna('NULL', inplace=True)
-# X = df.loc[:, [x for x in list(df.columns) if x != '好瓜']]
-# y = df['好瓜']
 print(df)
 
 cart = CART()
@@ -248,8 +280,7 @@ def plot_tree(my_tree):
             print(child.v)
         else:
             plot_tree(child)
-
-# plot_tree(my_tree)
+plot_tree(my_tree)
 
 # 绘制决策树
 plt.rcParams['font.sans-serif'] = ['Simhei']
