@@ -193,6 +193,7 @@ class CART(object):
         """
         # init tree
         node = Node(p_value,)
+        node.y_pre = pd.Series(['好瓜'] * len(self.y))
         node.deep = p_node.deep + 1
 
         # 判断深度
@@ -324,15 +325,18 @@ class CART(object):
                 else:
                     acc = 1
                 node.y_pre = self.y_pre.copy()
+                next_node_left.y_pre = self.y_pre.copy()
+                next_node_right.y_pre = self.y_pre.copy()
                 node.children.append(self.generate_tree(Dleft, acc, "是", next_node_left))  # 左边递归生成子树，是 yes 分支
                 node.children.append(self.generate_tree(Dright, acc, "否", next_node_right))  # 同上。 注意，在此时没有将对应的A中值变成 -1
         return node
 
     def postpruning(self, parent_node):
         # TODO: 完成postpruning.
+        print(parent_node.v, parent_node.title, parent_node.y_pre)
+        print(" =========================> ")
         parent_node_acc = self.cal_acc(parent_node.y_pre)
-        print(parent_node.titile, parent_node.v)
-        for child in my_tree.children:
+        for child in parent_node.children:
             if len(child.children) > 0:
                 self.postpruning(child)
             else:
@@ -359,7 +363,6 @@ class CART(object):
 
         root_acc = self.cal_acc()
         root_node = Node('root')
-        root_node.y_pre = pd.Series(['好瓜'] * D.shape[0])
         my_tree = self.generate_tree(D, root_acc, 'root', root_node)
         self.postpruning(my_tree)
         return my_tree
@@ -400,7 +403,6 @@ def dfsPlot(root):
             cur = dfsPlot(i)
             meanPx += cur
             childrenPx.append(cur)
-        print(f"root.v = {root.v}")
         meanPx = meanPx/len(root.children)
         c = 0
         for i in root.children:
