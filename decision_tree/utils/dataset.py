@@ -63,6 +63,7 @@ def load_watermelon_2() -> pd.DataFrame:
     df['脐部'] = navel_list
     df['触感'] = touch_list
     df['好瓜'] = target_list
+    df['权重'] = [1] * df.shape[0]
     return df
 
 
@@ -139,4 +140,4 @@ def load_watermelon_3() -> pd.DataFrame:
     
     df['密度'] = density_list
     df['含糖量'] = sugar_list
-    return df.loc[:, ['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', '密度', '含糖量', '好瓜']]
+    return df.loc[:, ['色泽', '根蒂', '敲声', '纹理', '脐部', '触感', '密度', '含糖量', '好瓜', '权重']]

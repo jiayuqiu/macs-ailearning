@@ -5,9 +5,9 @@ mpl.rcParams[u'font.sans-serif'] = ['simhei']
 mpl.rcParams['axes.unicode_minus'] = False
 
 
-arrow_args = dict(arrowstyle = "<-",color='green')
-leafNode = dict(boxstyle = "round4",fc="0.9",color='red')
-arrow_args = dict(arrowstyle = "<-",color='green')
+arrow_args = dict(arrowstyle="<-", color='green')
+leafNode = dict(boxstyle="round4", fc="0.9", color='red')
+arrow_args = dict(arrowstyle="<-", color='green')
 
 
 def countLeaf(root,deep):
