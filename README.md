@@ -1,4 +1,6 @@
 # macs-ailearning
 Ai Learning.
 
-争取每周更新笔记
+update:
+
+1. 2021.09.21: 完成CART。

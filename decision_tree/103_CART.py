@@ -4,10 +4,9 @@
 @Author  :   qiujiayu
 @Version :   1.1
 @Contact :   qiujy@highlander.com.cn
-@Desc    :   CART demo 考虑了缺失值的情况与预剪枝
-             但是，利用书中的缺失值数据的情况，那么在敲声样本会出现全部好瓜现象。分析后，是数据问题导致，利用无缺失情况，可正确分类。
-
-             TODO: 添加后剪枝，利用anytree的树结构进行编码
+@Desc    :   CART demo 完成。
+             考虑了缺失值、连续值的情况。
+             且对模型进行后剪枝，预剪枝比较简单没有进行编写。
 '''
 from math import inf
 
@@ -19,8 +18,6 @@ import utils.dataset as dataset
 from anytree import Node
 from anytree import RenderTree
 from anytree import find, findall
-
-# from sklearn.tree import DecisionTreeClassifier
 
 
 def get_rho(D, flag):
@@ -66,7 +63,6 @@ def gini_index(D, flag: str) -> float:
     """对属性a的基尼指数
     """
     if isinstance(D[flag].values[0], str):
-        y = D['好瓜']
         Av = [x for x in list(set((D[flag]))) if x != 'NULL']  # 在属性a上，a对应的取值列表
 
         # 计算在rho：在该属性上，非空取值权重占比
@@ -123,9 +119,6 @@ class CART(object):
         self.y = D['好瓜']
         self.y_pre = pd.Series(['好瓜'] * D.shape[0])
         super().__init__()
-
-    def cal_tree_accuracy(self, ):
-        pass
 
     def cal_weights(self, D):
         good_df = D.loc[D['好瓜']=='好瓜']
@@ -249,23 +242,6 @@ class CART(object):
         return my_tree
 
 
-# def clf_target(leaf, d):
-#     if isinstance(leaf.av, float):
-#         # 连续属性
-#         leaf_child_list = leaf.child
-#         if d[leaf.aname] <= leaf.av:
-#             return leaf_child_list[0].v  # right son
-#         else:
-#             return leaf_child_list[1].v  # left son
-#     else:
-#         # 离散属性
-#         if d[leaf.aname] == leaf.av:
-#             print(d[leaf.aname], leaf)
-#             return leaf.v
-#         else:
-#             return False
-
-
 def clf_data(node, d):
     target = 'x'
     if node.is_root:
@@ -352,9 +328,3 @@ print("======================> post pruned tree.")
 new_my_tree = post_prune(my_tree, df)
 print(RenderTree(new_my_tree))
 print(tree_accuracy(new_my_tree, df))
-
-# node_3 = findall(my_tree, lambda node: node.name == '色泽 = 乌黑')[0]
-# node_3.children = []
-# print(node_3.is_leaf)
-# print(post_prune(my_tree, df))
-# print(find(my_tree, lambda node: node.name == '纹理 = 清晰'))
